@@ -1,62 +1,107 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-import requests
+import math
+from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+import httpx
+import asyncio
 
-app = Flask(__name__)
-CORS(app)
+app = FastAPI()
 
-def is_prime(n):
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+def is_prime(n: int) -> bool:
     if n < 2:
         return False
-    for i in range(2, int(n ** 0.5) + 1):
+    for i in range(2, int(math.sqrt(abs(n))) + 1):
         if n % i == 0:
             return False
     return True
 
-def is_perfect(n):
-    return n == sum(i for i in range(1, n // 2 + 1) if n % i == 0)
+def is_perfect_number(n: int) -> bool:
+    if n <= 0:
+        return False
+    divisor_sum = sum(i for i in range(1, n) if n % i == 0)
+    return divisor_sum == n
 
-def is_armstrong(n):
-    digits = [int(d) for d in str(n)]
-    return n == sum(d ** len(digits) for d in digits)
+def is_armstrong_number(n: int) -> bool:
+    if n < 0:
+        return False
+    num_str = str(abs(n))
+    power = len(num_str)
+    return sum(int(digit) ** power for digit in num_str) == abs(n)
 
-def digit_sum(n):
-    return sum(int(d) for d in str(n))
+def generate_armstrong_fun_fact(number: int) -> str:
+    num_str = str(abs(number))
+    power = len(num_str)
+    calculation = ' + '.join([f'{digit}^{power}' for digit in num_str])
+    return f"{number} is an Armstrong number because {calculation} = {number}"
 
-def get_fun_fact(n):
-    url = f"http://numbersapi.com/{n}/math"
+async def get_fun_fact(number: int) -> str:
+        try:
+        if is_armstrong_number(number):
+            return generate_armstrong_fun_fact(number)
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"http://numbersapi.com/{number}")
+            return response.text if response.status_code == 200 else "No fun fact available"
+    except Exception:
+        return "No fun fact available"
+
+@app.get("/api/classify-number")
+async def classify_number(number: str = Query(None, description="Number to classify")):
+    if number is None:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": True,
+                "message": "Number parameter is required",
+                "number": None
+            }
+        )
+    
     try:
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()
-        return response.text
-    except requests.RequestException:
-        return "No fact available."
-
-@app.route('/api/classify-number', methods=['GET'])
-def classify_number():
-    num = request.args.get('number')
-    if num is None or not num.lstrip('-').isdigit():
-        return jsonify({"number": num, "error": True}), 400
+        number = int(number)
+    except ValueError:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "number": number,
+                "error": True,
+                "message": "Invalid number format"
+            }
+        )
     
-    num = int(num)
     properties = []
-    if is_armstrong(num):
+    if number % 2 == 1:
+        properties.append("odd")
+    else:
+        properties.append("even")
+    
+    if is_prime(number):
+        properties.append("prime")
+    if is_perfect_number(number):
+        properties.append("perfect")
+    if is_armstrong_number(number):
         properties.append("armstrong")
-    properties.append("odd" if num % 2 else "even")
     
-    response = {
-        "number": num,
-        "is_prime": is_prime(num),
-        "is_perfect": is_perfect(num),
+    digit_sum = sum(int(digit) for digit in str(abs(number)))
+    fun_fact = await get_fun_fact(number)
+    
+    return {
+        "number": number,
+        "is_prime": is_prime(number),
+        "is_perfect": is_perfect_number(number),
         "properties": properties,
-        "digit_sum": digit_sum(num),
-        "fun_fact": get_fun_fact(num)
+        "digit_sum": digit_sum,
+        "fun_fact": fun_fact
     }
-    
-    return jsonify(response)
 
-if __name__ == '__main__':
-    import os
-    host = os.getenv("FLASK_RUN_HOST", "0.0.0.0")
-    port = int(os.getenv("FLASK_RUN_PORT", 5000))
-    app.run(host=host, port=port, debug=False)
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
