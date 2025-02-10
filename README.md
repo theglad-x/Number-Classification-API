@@ -1,66 +1,116 @@
 # Number Classification API
-
-## Overview
-This API classifies a given number based on its mathematical properties and provides a fun fact about it.
+A simple API that classifies numbers based on mathematical properties and provides a fun fact using Flask and FastAPI.
 
 ## Features
-- Determines if a number is prime, perfect, or an Armstrong number.
-- Classifies numbers as odd or even.
-- Computes the digit sum of the number.
-- Retrieves a fun fact using the Numbers API.
-- Returns responses in JSON format.
-- Handles invalid input gracefully.
-- Supports CORS for cross-origin requests.
+- Check if a number is prime, perfect, or Armstrong.
+- Determine if a number is odd or even.
+- Calculate the digit sum of a number.
+- Fetch a fun fact about the number from NumbersAPI.
 
 ## Technologies Used
-- Python
-- Flask
-- Flask-CORS
-- Requests Library
+- Python 3.9
+- Flask (for development and debugging)
+- FastAPI & Uvicorn (for production-ready deployment)
+- Docker
 
-## API Endpoint
-### **GET** `/api/classify-number?number=<value>`
-#### **Request Parameters**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `number`  | int  | The number to classify |
+## Getting Started
 
-#### **Success Response (200 OK)**
-```json
-{
-    "number": 371,
-    "is_prime": false,
-    "is_perfect": false,
-    "properties": ["armstrong", "odd"],
-    "digit_sum": 11,
-    "fun_fact": "371 is an Armstrong number because 3^3 + 7^3 + 1^3 = 371"
-}
-```
+### Prerequisites
+Ensure you have the following installed
+- Python 3.8+
+- Docker
+- An AWS EC2 instance
 
-#### **Error Response (400 Bad Request)**
-```json
-{
-    "number": "invalid",
-    "error": true
-}
-```
-
-## Installation & Setup
-### **1. Clone the Repository**
-```sh
+### Installation
+1. Clone the repository
+``` bash
 git clone https://github.com/theglad-x/Number-Classification-API.git
 cd Number-Classification-API
 ```
 
-### **2. Create a Virtual Environment & Install Dependencies**
-```sh
-python -m venv venv
-source venv/bin/activate 
+2. Create a virtual environment
+``` bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+3. Install dependencies:
+``` bash
 pip install -r requirements.txt
 ```
 
-### **3. Run the API Locally**
-```sh
+4. Run the application locally
+``` bash
 python app.py
 ```
-The API will be available at `http://localhost:5000/api/classify-number?number=371`
+The app will be running on http://localhost:5000
+
+## Running with Docker
+
+### Build and Run the Docker Container
+1. Build the Docker image
+``` bash
+docker build -t number-classification-api .
+```
+2. Run the container:
+``` bash
+docker run -p 8000:8000 number-classification-api
+```
+The API will be available at http://localhost:8000
+
+## Deploying on AWS EC2
+
+### Steps:
+
+1. SSH into your EC2 instance
+``` bash
+ssh -i your-key.pem ubuntu@your-ec2-instance-ip
+```
+2. Install Docker
+``` bash
+sudo apt update
+sudo apt install docker.io -y
+```
+
+3. Clone the repository on the EC2 instance
+``` bash
+git clone https://github.com/theglad-x/Number-Classification-API.git
+cd Number-Classification-API
+```
+
+4. Build and run the container on EC2
+``` bash
+docker build -t number-classification-api .
+docker run -d -p 8000:8000 number-classification-api
+```
+
+5. Open port 8000 in your EC2 security group to allow access.
+
+6. Access the API via
+``` http://your-ec2-instance-ip:8000/api/classify-number?number=6 ```
+
+## API Endpoints
+
+### Classify a Number
+
+Endpoint
+``` bash
+GET /api/classify-number?number=<num>
+```
+
+Example Request:
+``` bash
+GET http://localhost:8000/api/classify-number?number=6
+```
+
+Example Response:
+``` bash
+{
+  "number": 6,
+  "is_prime": false,
+  "is_perfect": true,
+  "properties": ["even"],
+  "digit_sum": 6,
+  "fun_fact": "6 is a perfect number because the sum of its divisors (1,2,3) equals 6."
+}
+```
